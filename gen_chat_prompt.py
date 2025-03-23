@@ -1,8 +1,8 @@
 from ai21 import AI21Client
 from ai21.models.chat import ChatMessage
+import json
 
-
-def generate_battle_messages(player1, player2, move_key1, move_key2):
+def generate_battle_messages(player1, player2, state, move_key1, move_key2):
     # Build Player1's context and move details
     p1_context = f"Name: {player1['name']}\nPersona: {player1['persona']}\nHP: {player1['hp']}"
     move1 = player1[move_key1]
@@ -23,7 +23,7 @@ def generate_battle_messages(player1, player2, move_key1, move_key2):
         "An effectiveness of 0 indicates a complete miss or failure, causing no damage.\n\n"
         "An effectiveness of 200 represents maximum damage and optimal impact.\n\n"
         "Provide detailed context and storytelling that incorporates each player's background, chosen moves, "
-        "and the resulting effectiveness. Clearly illustrate the dynamics and drama of the exchange."
+        "and the resulting effectiveness. Consider effects from the previous round when determining effectiveness. Clearly illustrate the dynamics and drama of the exchange."
     )
     
     # Define the user prompt (combatants' details and move choices)
@@ -32,9 +32,20 @@ def generate_battle_messages(player1, player2, move_key1, move_key2):
         f"Move chosen by Player1:\n{move1_info}\n\n"
         f"Context for Player2:\n{p2_context}\n"
         f"Move chosen by Player2:\n{move2_info}\n\n"
+        f"Effects from the previous round:\n{state}\n\n"
         "Narrate the consequences of each player's move and describe how each player is affected. "
         "If either player's health falls below 0, declare the other player the victor and conclude with a compelling "
-        "and dramatic story about their triumph."
+        '''and dramatic story about their triumph. Your response must follow the format
+        {{
+           "effectiveness_1": effectiveness of move chosen by Player1,
+           "damage_1": damage done by Player1's move to Player2,
+           "narrative_1": your narration of Player1's move,
+           "effectiveness_2": effectiveness of move chosen by Player2,
+           "damage_2": damage done by Player2's move to Player1,
+           "narrative_2": your narration of Player2's move,
+           "summary": summary of the effects from this round that may affect effectiveness in the next round. Do not include HP of players.
+        }}
+        '''
     )
     
     # Return the messages as a list of dictionaries
@@ -43,6 +54,8 @@ def generate_battle_messages(player1, player2, move_key1, move_key2):
         {"role": "user", "content": user_prompt}
     ]
 
+def upd_players(p1, p2, out):
+    p1['']
 # Example usage:
 p1 = {'name': 'Elon Musk',
       'persona': 'Elon Musk is an innovative and unpredictable entrepreneur whose ideas spark both inspiration and controversy. '
@@ -65,7 +78,9 @@ p2 = {'name': 'Harry Potter',
       'move_4': {'name': 'Sectumsempra', 'description': 'Inflicts deep wounds, causing heavy magical damage.', 'dmg': 45},
       }
 
-messages = generate_battle_messages(p1, p2, 'move_1', 'move_1')
+state = 'None'
+
+messages = generate_battle_messages(p1, p2, state, 'move_1', 'move_1')
 # print(messages)
 
 
@@ -82,3 +97,4 @@ response = client.chat.completions.create(
     )
 print(response.choices[0].message.content)
 
+data = json.loads(response.choices[0].message.content.strip())
