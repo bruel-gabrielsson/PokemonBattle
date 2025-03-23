@@ -153,3 +153,11 @@ while both_alive:
     
     print(out)
     round_number += 1
+
+print('\n\n============= RESULT =============\n\n')
+if p1['hp'] > 0 and p1['hp'] <= 0:
+    print(f"{p1['name']} won!")
+elif p1['hp'] <= 0 and p1['hp'] > 0:
+    print(f"{p2['name']} won!")
+else:
+    print('It is a TIE')
