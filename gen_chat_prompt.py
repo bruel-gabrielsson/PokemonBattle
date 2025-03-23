@@ -1,7 +1,36 @@
 from ai21 import AI21Client
 from ai21.models.chat import ChatMessage
 import json
+import random
+import sys
 
+def parse_json(json_str):
+    # Remove the Markdown code block markers
+    lines = json_str.splitlines()
+    
+    # Remove the first line if it starts with ```
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+    
+    # Remove the last line if it starts with ```
+    if lines and lines[-1].startswith("```"):
+        lines = lines[:-1]
+    
+    # Join the remaining lines into a clean JSON string
+    clean_json_str = "\n".join(lines)
+    
+    # Parse the clean JSON string
+    try:
+        data = json.loads(clean_json_str)
+        return data
+        # print("Parsed JSON successfully!")
+        # print("Effectiveness of move 1:", data["effectiveness_1"])
+        # print("Damage of move 1:", data["damage_1"])
+        # print("Narrative for move 1:", data["narrative_1"])
+        # print("Summary:", data["summary"])
+    except:
+        return None
+    
 def generate_battle_messages(player1, player2, state, move_key1, move_key2):
     # Build Player1's context and move details
     p1_context = f"Name: {player1['name']}\nPersona: {player1['persona']}\nHP: {player1['hp']}"
@@ -54,8 +83,18 @@ def generate_battle_messages(player1, player2, state, move_key1, move_key2):
         {"role": "user", "content": user_prompt}
     ]
 
-def upd_players(p1, p2, out):
-    p1['']
+def upd_players_and_state(p1, p2, out_json):
+    p1['hp'] = p1['hp'] - out_json['damage_2']
+    p2['hp'] = p2['hp'] - out_json['damage_1']
+    alive = True
+    if p1['hp'] <= 0 or p2['hp'] <= 0:
+        alive = False
+    return p1, p2, out_json['summary'], alive
+
+KEY = 'v7uBaXL8sXKB4SmHsrxIOa14sYsWPcT9'
+
+client = AI21Client(api_key=KEY)  # or pass it in directly
+
 # Example usage:
 p1 = {'name': 'Elon Musk',
       'persona': 'Elon Musk is an innovative and unpredictable entrepreneur whose ideas spark both inspiration and controversy. '
@@ -79,22 +118,38 @@ p2 = {'name': 'Harry Potter',
       }
 
 state = 'None'
+moves = ['move_1', 'move_2', 'move_3', 'move_4']
+round_number = 1
+both_alive = True
 
-messages = generate_battle_messages(p1, p2, state, 'move_1', 'move_1')
-# print(messages)
-
-
-KEY = 'v7uBaXL8sXKB4SmHsrxIOa14sYsWPcT9'
-
-client = AI21Client(api_key=KEY)  # or pass it in directly
-
-
-response = client.chat.completions.create(
-    model='jamba-large',
-    messages=[ChatMessage(role='system', content=messages[0]['content']),
-              ChatMessage(role='user', content=messages[1]['content'])],
-    temperature=0.7
-    )
-print(response.choices[0].message.content)
-
-data = json.loads(response.choices[0].message.content.strip())
+while both_alive:
+    
+    move_1 = random.choice(moves)
+    move_2 = random.choice(moves)
+    
+    got_json = False
+    
+    try_count = 0
+    while not got_json:
+        messages = generate_battle_messages(p1, p2, state, move_1, move_2)
+        response = client.chat.completions.create(
+            model='jamba-large',
+            messages=[ChatMessage(role='system', content=messages[0]['content']),
+                      ChatMessage(role='user', content=messages[1]['content'])],
+            temperature=0.7
+            )
+        out = response.choices[0].message.content
+        narrative_json = parse_json(out.strip())
+        if narrative_json is not None:
+            got_json = True
+        else:
+            try_count += 1
+            if try_count >= 50:
+                sys.exit('GOT SUTCK :(')
+    
+    print(f'\n\n============= Round {round_number} =============\n\n')
+    
+    p1, p2, state, both_alive = upd_players_and_state(p1, p2, narrative_json)
+    
+    print(out)
+    round_number += 1
